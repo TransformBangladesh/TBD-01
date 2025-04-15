@@ -27,7 +27,6 @@ We are building an open, collaborative AI movement to:
 
 - Launched a static website via GitHub Pages  
 - Defined the core vision, values, and roadmap  
-- Assembled an initial team of passionate individuals  
 - Begun public outreach to find AI enthusiasts and collaborators  
 
 ---

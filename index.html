@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Study Tracker</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+</head>
+<body>
+    <!-- Authentication Modal -->
+    <div id="authModal" class="auth-modal active">
+        <div class="auth-container">
+            <div class="auth-header">
+                <h1><i class="fas fa-graduation-cap"></i> Study Tracker</h1>
+                <p>Your personal study companion</p>
+            </div>
+            
+            <div class="auth-tabs">
+                <button class="auth-tab active" data-tab="login">Login</button>
+                <button class="auth-tab" data-tab="signup">Sign Up</button>
+            </div>
+            
+            <!-- Login Form -->
+            <form id="loginForm" class="auth-form active">
+                <div class="form-group">
+                    <label for="loginEmail">Email</label>
+                    <input type="email" id="loginEmail" required placeholder="Enter your email">
+                </div>
+                <div class="form-group">
+                    <label for="loginPassword">Password</label>
+                    <input type="password" id="loginPassword" required placeholder="Enter your password">
+                </div>
+                <button type="submit" class="auth-btn">
+                    <i class="fas fa-sign-in-alt"></i> Login
+                </button>
+            </form>
+            
+            <!-- Signup Form -->
+            <form id="signupForm" class="auth-form">
+                <div class="form-group">
+                    <label for="signupUsername">Username</label>
+                    <input type="text" id="signupUsername" required placeholder="Choose a username">
+                </div>
+                <div class="form-group">
+                    <label for="signupEmail">Email</label>
+                    <input type="email" id="signupEmail" required placeholder="Enter your email">
+                </div>
+                <div class="form-group">
+                    <label for="signupPassword">Password</label>
+                    <input type="password" id="signupPassword" required placeholder="Create a password" minlength="6">
+                </div>
+                <div class="form-group">
+                    <label for="confirmPassword">Confirm Password</label>
+                    <input type="password" id="confirmPassword" required placeholder="Confirm your password">
+                </div>
+                <button type="submit" class="auth-btn">
+                    <i class="fas fa-user-plus"></i> Sign Up
+                </button>
+            </form>
+            
+            <div id="authMessage" class="auth-message"></div>
+            
+            <div class="auth-loading" id="authLoading">
+                <i class="fas fa-spinner fa-spin"></i> Processing...
+            </div>
+        </div>
+    </div>
+    
+    <div id="mqttStatus" class="mqtt-status mqtt-disconnected">MQTT: Disconnected</div>
+    
+    <!-- Sidebar -->
+    <nav class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <h2><i class="fas fa-graduation-cap"></i> <span class="sidebar-text">Study Tracker</span></h2>
+        </div>
+        
+        <ul class="sidebar-nav">
+            <li class="nav-item active" data-section="dashboard">
+                <a href="#dashboard">
+                    <i class="fas fa-tachometer-alt"></i>
+                    <span class="sidebar-text">Dashboard</span>
+                </a>
+            </li>
+            <li class="nav-item" data-section="timer">
+                <a href="#timer">
+                    <i class="fas fa-clock"></i>
+                    <span class="sidebar-text">Pomodoro Timer</span>
+                </a>
+            </li>
+            <li class="nav-item" data-section="subjects">
+                <a href="#subjects">
+                    <i class="fas fa-book-open"></i>
+                    <span class="sidebar-text">Subjects</span>
+                </a>
+            </li>
+            <li class="nav-item" data-section="rooms">
+                <a href="#rooms">
+                    <i class="fas fa-users"></i>
+                    <span class="sidebar-text">Study Rooms</span>
+                </a>
+            </li>
+            <li class="nav-item" data-section="history">
+                <a href="#history">
+                    <i class="fas fa-history"></i>
+                    <span class="sidebar-text">History</span>
+                </a>
+            </li>
+        </ul>
+        
+        <div class="sidebar-footer">
+            <div class="user-info">
+                <i class="fas fa-user-circle"></i>
+                <span class="sidebar-text" id="username">Loading...</span>
+            </div>
+            <button id="logoutBtn" class="logout-btn">
+                <i class="fas fa-sign-out-alt"></i>
+                <span class="sidebar-text">Logout</span>
+            </button>
+        </div>
+    </nav>
+    
+    <!-- Mobile Overlay -->
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+    
+    <!-- Main Content -->
+    <main class="main-content">
+        <header class="content-header">
+            <button id="sidebarToggle" class="sidebar-toggle">
+                <i class="fas fa-bars"></i>
+            </button>
+            <h1 id="sectionTitle">Dashboard</h1>
+        </header>
+        
+        <!-- Dashboard Section -->
+        <section id="dashboard" class="content-section active">
+            <div class="dashboard-grid">
+                <div class="dashboard-card">
+                    <div class="card-icon">
+                        <i class="fas fa-clock"></i>
+                    </div>
+                    <div class="card-content">
+                        <h3>Today's Focus Time</h3>
+                        <div class="card-value" id="todayFocusTime">0 min</div>
+                        <p>Keep up the great work!</p>
+                    </div>
+                </div>
+                
+                <div class="dashboard-card">
+                    <div class="card-icon">
+                        <i class="fas fa-tasks"></i>
+                    </div>
+                    <div class="card-content">
+                        <h3>Study Sessions</h3>
+                        <div class="card-value" id="todaySessions">0</div>
+                        <p>sessions completed today</p>
+                    </div>
+                </div>
+                
+                <div class="dashboard-card">
+                    <div class="card-icon">
+                        <i class="fas fa-users"></i>
+                    </div>
+                    <div class="card-content">
+                        <h3>Active Rooms</h3>
+                        <div class="card-value" id="activeRoomsCount">0</div>
+                        <p>rooms available</p>
+                    </div>
+                </div>
+                
+                <div class="dashboard-card">
+                    <div class="card-icon">
+                        <i class="fas fa-chart-line"></i>
+                    </div>
+                    <div class="card-content">
+                        <h3>Weekly Progress</h3>
+                        <div class="card-value" id="weeklyProgress">0%</div>
+                        <p>of your weekly goal</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="quick-actions">
+                <h3>Quick Actions</h3>
+                <div class="action-buttons">
+                    <button class="action-btn" onclick="switchSection('timer')">
+                        <i class="fas fa-play"></i>
+                        Start Timer
+                    </button>
+                    <button class="action-btn" onclick="switchSection('sessions')">
+                        <i class="fas fa-plus"></i>
+                        Add Session
+                    </button>
+                    <button class="action-btn" onclick="switchSection('rooms')">
+                        <i class="fas fa-door-open"></i>
+                        Join Room
+                    </button>
+                </div>
+            </div>
+        </section>
+        
+        <!-- Pomodoro Timer Section -->
+        <section id="timer" class="content-section">
+            <div class="section-header">
+                <h2><i class="fas fa-clock"></i> Pomodoro Timer</h2>
+                <p>Stay focused with timed work sessions</p>
+            </div>
+            
+            <div class="timer-container modern-timer">
+                <div class="timer-subject-selector">
+                    <label for="timerSubject">Select Subject</label>
+                    <select id="timerSubject" required>
+                        <option value="">Choose a subject</option>
+                    </select>
+                </div>
+                
+                <div class="timer-display-modern">
+                    <div class="timer-circle-modern">
+                        <svg class="timer-progress-ring" width="300" height="300">
+                            <circle
+                                class="timer-progress-ring-background"
+                                stroke="rgba(255, 255, 255, 0.1)"
+                                stroke-width="8"
+                                fill="transparent"
+                                r="140"
+                                cx="150"
+                                cy="150"/>
+                            <circle
+                                class="timer-progress-ring-progress"
+                                stroke="#6366f1"
+                                stroke-width="8"
+                                fill="transparent"
+                                r="140"
+                                cx="150"
+                                cy="150"
+                                stroke-dasharray="879.646"
+                                stroke-dashoffset="0"
+                                id="timerProgressRing"/>
+                        </svg>
+                        <div class="timer-content">
+                            <div class="timer-time-modern" id="timerDisplay">25:00</div>
+                            <div class="timer-phase-modern" id="timerPhase">Focus Time</div>
+                            <div class="timer-session-info" id="timerSession">Session 1 of 4</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="timer-controls-modern">
+                    <button id="startTimer" class="btn-timer-modern btn-start">
+                        <i class="fas fa-play"></i>
+                    </button>
+                    <button id="pauseTimer" class="btn-timer-modern btn-pause" disabled>
+                        <i class="fas fa-pause"></i>
+                    </button>
+                    <button id="resetTimer" class="btn-timer-modern btn-reset">
+                        <i class="fas fa-redo"></i>
+                    </button>
+                </div>
+                
+                <div class="timer-settings-modern">
+                    <h3>Timer Settings</h3>
+                    <div class="settings-grid-modern">
+                        <div class="setting-item">
+                            <label for="workTime">Focus Time</label>
+                            <div class="setting-input">
+                                <input type="number" id="workTime" value="25" min="1" max="60">
+                                <span>min</span>
+                            </div>
+                        </div>
+                        <div class="setting-item">
+                            <label for="breakTime">Short Break</label>
+                            <div class="setting-input">
+                                <input type="number" id="breakTime" value="5" min="1" max="30">
+                                <span>min</span>
+                            </div>
+                        </div>
+                        <div class="setting-item">
+                            <label for="longBreakTime">Long Break</label>
+                            <div class="setting-input">
+                                <input type="number" id="longBreakTime" value="15" min="1" max="60">
+                                <span>min</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+        
+        <!-- Subjects Section -->
+        <section id="subjects" class="content-section">
+            <div class="section-header">
+                <h2><i class="fas fa-book-open"></i> Subjects</h2>
+                <p>Manage your subjects and track weekly progress</p>
+            </div>
+            
+            <div class="subjects-container">
+                <div class="add-subject-form">
+                    <h3>Add New Subject</h3>
+                    <form id="subjectForm">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="subjectName">Subject Name</label>
+                                <input type="text" id="subjectName" required placeholder="e.g., Mathematics, Physics">
+                            </div>
+                            <div class="form-group">
+                                <label for="weeklyTarget">Weekly Target (hours)</label>
+                                <input type="number" id="weeklyTarget" min="1" max="168" required placeholder="10">
+                            </div>
+                        </div>
+                        <button type="submit" class="btn-primary">
+                            <i class="fas fa-plus"></i> Add Subject
+                        </button>
+                    </form>
+                </div>
+                
+                <div class="subjects-list">
+                    <h3>Your Subjects</h3>
+                    <div id="subjectsList" class="subjects-grid">
+                        <p class="no-subjects">No subjects yet. Add a subject to start tracking your progress!</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+        
+        <!-- Study Sessions Section -->
+        <section id="sessions" class="content-section">
+            <div class="section-header">
+                <h2><i class="fas fa-book"></i> Study Sessions</h2>
+                <p>Track your study time and progress</p>
+            </div>
+            
+            <div class="sessions-container">
+                <div class="add-session-form">
+                    <h3>Add New Session</h3>
+                    <form id="studyForm">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="subject">Subject</label>
+                                <select id="subject" required>
+                                    <option value="">Select a subject</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="duration">Duration (minutes)</label>
+                                <input type="number" id="duration" min="1" max="480" required placeholder="30">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="notes">Notes (optional)</label>
+                            <textarea id="notes" placeholder="What did you study? Any important points?"></textarea>
+                        </div>
+                        <button type="submit" class="btn-primary">
+                            <i class="fas fa-plus"></i> Add Session
+                        </button>
+                    </form>
+                </div>
+                
+                <div class="today-summary">
+                    <h3>Today's Summary</h3>
+                    <div class="summary-stats">
+                        <div class="stat-card">
+                            <span class="stat-number" id="totalSessions">0</span>
+                            <span class="stat-label">Sessions</span>
+                        </div>
+                        <div class="stat-card">
+                            <span class="stat-number" id="totalTime">0</span>
+                            <span class="stat-label">Minutes</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+        
+        <!-- Study Rooms Section -->
+        <section id="rooms" class="content-section">
+            <div class="section-header">
+                <h2><i class="fas fa-users"></i> Study Rooms</h2>
+                <p>Study together with others</p>
+            </div>
+            
+            <div class="rooms-container">
+                <!-- Room Action Bar -->
+                <div class="room-action-bar" id="roomActionBar">
+                    <div class="room-action-selector">
+                        <button class="room-action-btn active" data-action="join">
+                            <i class="fas fa-sign-in-alt"></i>
+                            <span>Join Room</span>
+                        </button>
+                        <button class="room-action-btn" data-action="create">
+                            <i class="fas fa-plus"></i>
+                            <span>Create Room</span>
+                        </button>
+                    </div>
+                    
+                    <!-- Join Room Form -->
+                    <div class="room-form join-form active" id="joinRoomSection">
+                        <form id="joinRoomForm">
+                            <div class="form-group">
+                                <input type="text" id="joinRoomCode" required placeholder="Enter room code" maxlength="8">
+                                <button type="submit" class="btn-primary">
+                                    <i class="fas fa-arrow-right"></i>
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                    
+                    <!-- Create Room Form -->
+                    <div class="room-form create-form" id="createRoomSection">
+                        <form id="createRoomForm">
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <input type="text" id="roomName" required placeholder="Room name">
+                                </div>
+                                <div class="form-group">
+                                    <input type="text" id="roomCode" required placeholder="Room code" maxlength="8">
+                                </div>
+                                <button type="submit" class="btn-primary">
+                                    <i class="fas fa-plus"></i> Create
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+                
+                <!-- Room Interface (shown when in a room) -->
+                <div id="roomInterface" class="room-interface" style="display: none;">
+                    <div class="room-header">
+                        <div class="room-info">
+                            <h3 id="currentRoomName">Room Name</h3>
+                            <span class="room-code">Code: <strong id="currentRoomCode"></strong></span>
+                        </div>
+                        <div class="room-timer">
+                            <div class="small-timer" id="roomTimer">
+                                <span class="timer-display" id="roomTimerDisplay">00:00</span>
+                                <button class="timer-btn" id="roomTimerBtn">
+                                    <i class="fas fa-play"></i>
+                                </button>
+                            </div>
+                            <select id="roomTimerSubject" class="timer-subject">
+                                <option value="">Select subject</option>
+                            </select>
+                        </div>
+                        <button id="leaveRoom" class="leave-room-btn">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    
+                    <div class="room-members" id="roomMembers">
+                        <h4>Members</h4>
+                        <div class="members-list" id="membersList">
+                            <!-- Members will be populated here -->
+                        </div>
+                    </div>
+                    
+                    <div class="room-chat">
+                        <div id="chatMessages" class="chat-messages messenger-style">
+                            <!-- Chat messages will appear here -->
+                        </div>
+                        <form id="chatForm" class="chat-form messenger-style">
+                            <div class="chat-input-container">
+                                <input type="text" id="chatInput" placeholder="Type a message..." maxlength="200">
+                                <button type="submit" class="chat-send-btn">
+                                    <i class="fas fa-paper-plane"></i>
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </section>
+        
+        <!-- History Section -->
+        <section id="history" class="content-section">
+            <div class="section-header">
+                <h2><i class="fas fa-history"></i> Study History</h2>
+                <p>Review your study sessions and progress</p>
+            </div>
+            
+            <div class="history-container">
+                <div class="history-filters">
+                    <h3>Filter Sessions</h3>
+                    <div class="filter-options">
+                        <select id="subjectFilter">
+                            <option value="">All Subjects</option>
+                        </select>
+                        <select id="dateFilter">
+                            <option value="today">Today</option>
+                            <option value="week">This Week</option>
+                            <option value="month">This Month</option>
+                            <option value="all">All Time</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="sessions-history">
+                    <h3>Recent Sessions</h3>
+                    <div id="sessionsList" class="sessions-list">
+                        <p class="no-sessions">No study sessions yet. Start studying to see your progress!</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+    
+    <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
